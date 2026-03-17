@@ -1,17 +1,18 @@
 # Cartera Inversiones - Add-on Home Assistant
-# Base Debian: wheels precompilados para numpy/pandas en ARM (evita compilación)
-# Valor por defecto por si el build system no pasa BUILD_FROM
+# Usa imagen base oficial de HA con Python (build.yaml)
 
-ARG BUILD_FROM=python:3.12-slim-bookworm
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
+
+# Dependencias del sistema para compilar numpy/pandas en Alpine
+RUN apk add --no-cache build-base libffi-dev libstdc++
 
 # Crear directorio de la aplicación
 WORKDIR /app
 
 # Copiar requirements e instalar dependencias Python
-# Debian tiene wheels para todas las arquitecturas - sin compilación
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Copiar aplicación
 COPY app.py .
