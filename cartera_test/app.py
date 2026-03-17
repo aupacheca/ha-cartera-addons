@@ -75,6 +75,28 @@ CRYPTO_BROKER_IDS = {
 }
 
 
+def _get_data_mount_source() -> str | None:
+    """Intenta obtener la ruta real del host donde está montado /data (para addons HA)."""
+    try:
+        mountinfo = Path("/proc/self/mountinfo")
+        if not mountinfo.exists():
+            return None
+        for line in mountinfo.read_text().splitlines():
+            parts = line.split()
+            if len(parts) >= 5 and parts[4] == "/data":
+                # Buscar "-" y luego fs_type, source
+                try:
+                    idx = parts.index("-", 5)
+                    if idx + 2 < len(parts):
+                        return parts[idx + 2]  # mount source
+                except ValueError:
+                    pass
+                return parts[3] if len(parts) > 3 else None
+    except Exception:
+        pass
+    return None
+
+
 def _get_db():
     return sqlite3.connect(DB_PATH)
 
@@ -776,6 +798,7 @@ def _row_to_db_val(v):
 
 def append_operation(new_row: dict) -> None:
     """Añade una fila a la tabla movimientos (acciones/ETFs)."""
+    print(f"[Cartera] Guardando movimiento en: {DB_PATH}", flush=True)
     vals = [_row_to_db_val(new_row.get(c, "")) for c in MOVIMIENTOS_COLUMNS]
     placeholders = ", ".join("?" for _ in MOVIMIENTOS_COLUMNS)
     with _get_db() as conn:
@@ -2240,9 +2263,16 @@ def main() -> None:
     # Menú izquierda: solo páginas
     vista = st.sidebar.radio("Página", ["Cartera", "Movimientos", "Fiscalidad", "Brokers"], index=0, label_visibility="collapsed")
 
+    # Ruta de datos siempre visible (para saber dónde se guarda)
+    st.sidebar.caption("**📁 Ubicación de datos:**")
+    mount_src = _get_data_mount_source()
+    if mount_src:
+        st.sidebar.code(f"Host: {mount_src}\nBD: {DB_PATH}\nCSV: {CSV_PATH}", language=None)
+        st.sidebar.caption("Busca esa carpeta en File Editor o Samba.")
+    else:
+        st.sidebar.code(f"Dentro addon: {DB_PATH}", language=None)
+
     with st.sidebar.expander("Mantenimiento"):
-        st.caption("**Ubicación de datos (dentro del addon):**")
-        st.code(f"Directorio: {_DATA_DIR}\nBase de datos: {DB_PATH}", language=None)
         st.caption(
             "Los datos se guardan en la base SQLite. Exporta a CSV para respaldo; "
             "no abras los CSV con Excel si no quieres corromper el formato."
