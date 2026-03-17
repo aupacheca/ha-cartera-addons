@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import math
@@ -2278,7 +2279,7 @@ def main() -> None:
             "no abras los CSV con Excel si no quieres corromper el formato."
         )
         st.caption("**Acciones / ETFs:**")
-        # Exportar: genera CSV y ofrece descarga al PC
+        # Exportar: genera CSV y ofrece descarga (enlace data URL para que funcione en iframe)
         df_exp = load_data()
         if not df_exp.empty:
             cols_exp = [c for c in MOVIMIENTOS_COLUMNS if c in df_exp.columns]
@@ -2288,7 +2289,13 @@ def main() -> None:
                     if col in out_exp.columns:
                         out_exp[col] = out_exp[col].astype(str)
                 csv_bytes = out_exp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING).encode(CSV_ENCODING)
-                st.download_button("⬇️ Descargar acciones.csv", data=csv_bytes, file_name="acciones.csv", mime="text/csv", key="dl_acciones")
+                b64 = base64.b64encode(csv_bytes).decode()
+                st.markdown(
+                    f'<a href="data:text/csv;base64,{b64}" download="acciones.csv" '
+                    'style="display:inline-block;padding:0.5rem 1rem;background:#ff4b4b;color:white;border-radius:0.5rem;text-decoration:none;font-size:0.9rem;">'
+                    '⬇️ Descargar acciones.csv</a>',
+                    unsafe_allow_html=True,
+                )
         # Restaurar: subir CSV desde el PC
         uploaded_acc = st.file_uploader("Restaurar acciones desde CSV", type=["csv"], key="upload_acciones")
         if uploaded_acc is not None:
@@ -2313,7 +2320,7 @@ def main() -> None:
             except Exception as e:
                 st.error(f"No se pudo leer el CSV: {e}")
         st.caption("**Fondos:**")
-        # Exportar fondos: descarga al PC
+        # Exportar fondos: enlace data URL (funciona en iframe)
         df_fondos_exp = load_data_fondos()
         if df_fondos_exp is not None and not df_fondos_exp.empty:
             cols_fexp = [c for c in MOVIMIENTOS_COLUMNS if c in df_fondos_exp.columns]
@@ -2323,7 +2330,14 @@ def main() -> None:
                     if col in out_fexp.columns:
                         out_fexp[col] = out_fexp[col].astype(str)
                 csv_fondos = out_fexp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING).encode(CSV_ENCODING)
-                st.download_button("⬇️ Descargar fondos.csv", data=csv_fondos, file_name="fondos.csv", mime="text/csv", key="dl_fondos")
+                b64_f = base64.b64encode(csv_fondos).decode()
+                st.markdown(
+                    f'<a href="data:text/csv;base64,{b64_f}" download="fondos.csv" '
+                    'style="display:inline-block;padding:0.5rem 1rem;background:#ff4b4b;color:white;border-radius:0.5rem;text-decoration:none;font-size:0.9rem;">'
+                    '⬇️ Descargar fondos.csv</a>',
+                    unsafe_allow_html=True,
+                )
+        st.caption("_Si no descarga: abre la app en nueva pestaña (http://homeassistant.local:8502)_")
         # Restaurar fondos: subir CSV
         uploaded_fondos = st.file_uploader("Restaurar fondos desde CSV", type=["csv"], key="upload_fondos")
         if uploaded_fondos is not None:
