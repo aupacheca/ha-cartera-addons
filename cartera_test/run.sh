@@ -3,8 +3,12 @@
 # addon_config:rw monta la carpeta del add-on en /config (accesible por Samba: addon_configs)
 # share:rw monta /share (accesible por Samba). Puedes elegir la ruta en Configuración del add-on.
 
-# Leer ruta de datos desde options.json (configurable en la UI del add-on)
-if [ -f /data/options.json ]; then
+# Leer ruta de datos (prioridad: archivo en /config > options.json > por defecto)
+# Plan B: si la UI de HA no muestra data_path, configúralo desde la app (Mantenimiento > Ruta de datos)
+if [ -f /config/data_path.txt ]; then
+    DATA_DIR=$(cat /config/data_path.txt | head -1 | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+fi
+if [ -z "$DATA_DIR" ] && [ -f /data/options.json ]; then
     DATA_DIR=$(python3 -c "import json; d=json.load(open('/data/options.json')); p=(d.get('data_path') or '/config').strip(); print(p or '/config')" 2>/dev/null)
 fi
 DATA_DIR=${DATA_DIR:-/config}
