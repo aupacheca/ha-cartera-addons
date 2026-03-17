@@ -2241,8 +2241,10 @@ def main() -> None:
     vista = st.sidebar.radio("Página", ["Cartera", "Movimientos", "Fiscalidad", "Brokers"], index=0, label_visibility="collapsed")
 
     with st.sidebar.expander("Mantenimiento"):
+        st.caption("**Ubicación de datos (dentro del addon):**")
+        st.code(f"Directorio: {_DATA_DIR}\nBase de datos: {DB_PATH}", language=None)
         st.caption(
-            "Los datos se guardan en la base SQLite (acciones.db). Exporta a CSV para respaldo; "
+            "Los datos se guardan en la base SQLite. Exporta a CSV para respaldo; "
             "no abras los CSV con Excel si no quieres corromper el formato."
         )
         st.caption("**Acciones / ETFs:**")
