@@ -77,22 +77,21 @@ CRYPTO_BROKER_IDS = {
 
 
 def _get_data_mount_source() -> str | None:
-    """Intenta obtener la ruta real del host donde está montado /data (para addons HA)."""
+    """Intenta obtener la ruta real del host donde está montado DATA_DIR (para addons HA)."""
     try:
         mountinfo = Path("/proc/self/mountinfo")
         if not mountinfo.exists():
             return None
-        for line in mountinfo.read_text().splitlines():
-            parts = line.split()
-            if len(parts) >= 5 and parts[4] == "/data":
-                # Buscar "-" y luego fs_type, source
-                try:
-                    idx = parts.index("-", 5)
-                    if idx + 2 < len(parts):
-                        return parts[idx + 2]  # mount source
-                except ValueError:
-                    pass
-                return parts[3] if len(parts) > 3 else None
+        for mount_point in ["/config", "/data"]:
+            for line in mountinfo.read_text().splitlines():
+                parts = line.split()
+                if len(parts) >= 5 and parts[4] == mount_point:
+                    try:
+                        idx = parts.index("-", 5)
+                        if idx + 2 < len(parts):
+                            return parts[idx + 2]
+                    except ValueError:
+                        pass
     except Exception:
         pass
     return None
@@ -2269,7 +2268,7 @@ def main() -> None:
     mount_src = _get_data_mount_source()
     if mount_src:
         st.sidebar.code(f"Host: {mount_src}\nBD: {DB_PATH}\nCSV: {CSV_PATH}", language=None)
-        st.sidebar.caption("Busca esa carpeta en File Editor o Samba.")
+        st.sidebar.caption("Samba: \\\\homeassistant.local\\\\addon_configs\\\\ (busca la carpeta del add-on)")
     else:
         st.sidebar.code(f"Dentro addon: {DB_PATH}", language=None)
 
@@ -2292,13 +2291,13 @@ def main() -> None:
                             out_exp[col] = out_exp[col].astype(str)
                     csv_str = out_exp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING)
                     csv_bytes = csv_str.encode(CSV_ENCODING)
-                    # Guardar en /data (escribible; /config y /share pueden ser read-only)
-                    export_dir = Path("/data") / "cartera_export"
+                    # Guardar en DATA_DIR (con addon_config:rw es /config, accesible por Samba)
+                    export_dir = _DATA_DIR / "cartera_export"
                     export_path = export_dir / "acciones.csv"
                     try:
                         export_dir.mkdir(parents=True, exist_ok=True)
                         export_path.write_text(csv_str, encoding=CSV_ENCODING)
-                        st.success("Exportado a **/data/cartera_export/acciones.csv**")
+                        st.success(f"Exportado a **{export_dir}/acciones.csv**")
                         st.caption("Misma ubicación que la BD. Enlace alternativo si no puedes acceder:")
                         b64 = base64.b64encode(csv_bytes).decode()
                         st.markdown(
@@ -2352,15 +2351,15 @@ def main() -> None:
                         if col in out_fexp.columns:
                             out_fexp[col] = out_fexp[col].astype(str)
                     csv_fondos_str = out_fexp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING)
-                    export_dir = Path("/data") / "cartera_export"
+                    export_dir = _DATA_DIR / "cartera_export"
                     export_path_f = export_dir / "fondos.csv"
                     try:
                         export_dir.mkdir(parents=True, exist_ok=True)
                         export_path_f.write_text(csv_fondos_str, encoding=CSV_ENCODING)
-                        st.success("Exportado a **/data/cartera_export/fondos.csv**")
+                        st.success(f"Exportado a **{export_dir}/fondos.csv**")
                     except Exception as e:
                         st.error(f"No se pudo guardar: {e}")
-        st.caption("_Export: /data/cartera_export/ (misma ubicación que la BD)_")
+        st.caption(f"_Datos en: {_DATA_DIR} (Samba: addon_configs)_")
         # Restaurar fondos: subir CSV
         uploaded_fondos = st.file_uploader("Restaurar fondos desde CSV", type=["csv"], key="upload_fondos")
         if uploaded_fondos is not None:

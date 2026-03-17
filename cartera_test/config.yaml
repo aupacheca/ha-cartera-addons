@@ -2,8 +2,8 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 
 name: Cartera TEST
-description: Aplicacion de cartera de inversiones (acciones, ETFs, fondos, criptos) con Streamlit. Gestiona movimientos, dividendos y fiscalidad. VERSION DE PRUEBA - usa puerto 8502 y base de datos acciones_test.db.
-version: "1.0.1"
+description: Aplicacion de cartera de inversiones (acciones, ETFs, fondos, criptos) con Streamlit. Gestiona movimientos, dividendos y fiscalidad. VERSION DE PRUEBA - puerto 8502. Puedes elegir la ruta de la base de datos en Configuracion (ej. /config, /share/cartera).
+version: "1.0.2"
 slug: cartera_test
 url: "https://github.com/aupacheca/ha-cartera-addons"
 arch:
@@ -13,11 +13,16 @@ arch:
   - amd64
   - i386
 init: false
+# addon_config:rw = carpeta escribible accesible por Samba (addon_configs)
+# share:rw = carpeta /share accesible por Samba (permite elegir ruta de BD)
 map:
-  - config
-  - share
+  - addon_config:rw
+  - share:rw
 ports:
   "8502/tcp": 8502
 ports_description:
   "8502": "Interfaz web Streamlit (version de prueba)"
-schema: false
+options:
+  data_path: "/config"
+schema:
+  data_path: str
