@@ -2278,33 +2278,77 @@ def main() -> None:
             "no abras los CSV con Excel si no quieres corromper el formato."
         )
         st.caption("**Acciones / ETFs:**")
-        if st.button("Exportar acciones a CSV (respaldo)"):
-            if export_to_csv():
-                st.success("Exportado a acciones.csv. Recargando…")
-                st.rerun()
-            else:
-                st.error("No se pudo exportar.")
-        if st.button("Restaurar acciones desde acciones.csv"):
-            ok, msg = restore_movimientos_from_csv()
-            if ok:
-                st.success(msg)
-                st.rerun()
-            else:
-                st.error(msg)
+        # Exportar: genera CSV y ofrece descarga al PC
+        df_exp = load_data()
+        if not df_exp.empty:
+            cols_exp = [c for c in MOVIMIENTOS_COLUMNS if c in df_exp.columns]
+            if cols_exp:
+                out_exp = df_exp[cols_exp].copy()
+                for col in ("date", "time"):
+                    if col in out_exp.columns:
+                        out_exp[col] = out_exp[col].astype(str)
+                csv_bytes = out_exp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING).encode(CSV_ENCODING)
+                st.download_button("⬇️ Descargar acciones.csv", data=csv_bytes, file_name="acciones.csv", mime="text/csv", key="dl_acciones")
+        # Restaurar: subir CSV desde el PC
+        uploaded_acc = st.file_uploader("Restaurar acciones desde CSV", type=["csv"], key="upload_acciones")
+        if uploaded_acc is not None:
+            try:
+                df_up = pd.read_csv(uploaded_acc, sep=CSV_SEP, encoding=CSV_ENCODING, dtype=str, keep_default_na=False)
+                cols_up = [c for c in MOVIMIENTOS_COLUMNS if c in df_up.columns]
+                if cols_up:
+                    for col in ["positionNumber", "price", "total", "totalBaseCurrency", "totalWithComission", "totalWithComissionBaseCurrency", "comission", "taxes", "exchangeRate"]:
+                        if col in df_up.columns:
+                            s = df_up[col].astype(str).str.strip().str.replace(",", ".", regex=False)
+                            df_up[col] = pd.to_numeric(s, errors="coerce")
+                    if "date" in df_up.columns:
+                        df_up["date"] = df_up["date"].astype(str).str.split("T").str[0].str.strip()
+                    if "time" in df_up.columns:
+                        df_up["time"] = df_up["time"].astype(str).str.strip().apply(_normalize_time_to_24h)
+                    write_full_db(df_up[[c for c in MOVIMIENTOS_COLUMNS if c in df_up.columns]])
+                    load_data.clear()
+                    st.success(f"Restaurados {len(df_up)} movimientos desde el CSV.")
+                    st.rerun()
+                else:
+                    st.error("El CSV no tiene las columnas esperadas.")
+            except Exception as e:
+                st.error(f"No se pudo leer el CSV: {e}")
         st.caption("**Fondos:**")
-        if st.button("Exportar fondos a CSV (respaldo)"):
-            if export_fondos_to_csv():
-                st.success("Exportado a fondos.csv. Recargando…")
-                st.rerun()
-            else:
-                st.error("No se pudo exportar fondos.")
-        if st.button("Restaurar fondos desde fondos.csv"):
-            ok, msg = restore_fondos_from_csv()
-            if ok:
-                st.success(msg)
-                st.rerun()
-            else:
-                st.error(msg)
+        # Exportar fondos: descarga al PC
+        df_fondos_exp = load_data_fondos()
+        if df_fondos_exp is not None and not df_fondos_exp.empty:
+            cols_fexp = [c for c in MOVIMIENTOS_COLUMNS if c in df_fondos_exp.columns]
+            if cols_fexp:
+                out_fexp = df_fondos_exp[cols_fexp].copy()
+                for col in ("date", "time"):
+                    if col in out_fexp.columns:
+                        out_fexp[col] = out_fexp[col].astype(str)
+                csv_fondos = out_fexp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING).encode(CSV_ENCODING)
+                st.download_button("⬇️ Descargar fondos.csv", data=csv_fondos, file_name="fondos.csv", mime="text/csv", key="dl_fondos")
+        # Restaurar fondos: subir CSV
+        uploaded_fondos = st.file_uploader("Restaurar fondos desde CSV", type=["csv"], key="upload_fondos")
+        if uploaded_fondos is not None:
+            try:
+                df_fup = pd.read_csv(uploaded_fondos, sep=CSV_SEP, encoding=CSV_ENCODING, dtype=str, keep_default_na=False)
+                if "nombre" in df_fup.columns and "name" not in df_fup.columns:
+                    df_fup["name"] = df_fup["nombre"].astype(str).str.strip()
+                cols_fup = [c for c in MOVIMIENTOS_COLUMNS if c in df_fup.columns]
+                if cols_fup:
+                    for col in ["positionNumber", "price", "total", "totalBaseCurrency", "totalWithComission", "totalWithComissionBaseCurrency", "comission", "taxes", "exchangeRate"]:
+                        if col in df_fup.columns:
+                            s = df_fup[col].astype(str).str.strip().str.replace(",", ".", regex=False)
+                            df_fup[col] = pd.to_numeric(s, errors="coerce")
+                    if "date" in df_fup.columns:
+                        df_fup["date"] = df_fup["date"].astype(str).str.split("T").str[0].str.strip()
+                    if "time" in df_fup.columns:
+                        df_fup["time"] = df_fup["time"].astype(str).str.strip().apply(_normalize_time_to_24h)
+                    write_full_db_fondos(df_fup[[c for c in MOVIMIENTOS_COLUMNS if c in df_fup.columns]])
+                    load_data_fondos.clear()
+                    st.success(f"Restaurados {len(df_fup)} movimientos de fondos desde el CSV.")
+                    st.rerun()
+                else:
+                    st.error("El CSV no tiene las columnas esperadas.")
+            except Exception as e:
+                st.error(f"No se pudo leer el CSV: {e}")
         st.caption("**Totales:**")
         if st.button("📐 Recalcular totales", key="btn_recalc_totals", help="Recalcula total, totalBaseCurrency, totalWithComission y totalWithComissionBaseCurrency para todos los movimientos (acciones, fondos, criptos). No actualiza si detecta anomalías."):
             n, msg = recalc_all_totals()
