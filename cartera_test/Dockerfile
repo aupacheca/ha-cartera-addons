@@ -1,7 +1,8 @@
 # Cartera Inversiones - Add-on Home Assistant
 # Base Debian: wheels precompilados para numpy/pandas en ARM (evita compilación)
+# Valor por defecto por si el build system no pasa BUILD_FROM
 
-ARG BUILD_FROM
+ARG BUILD_FROM=python:3.12-slim-bookworm
 FROM ${BUILD_FROM}
 
 # Crear directorio de la aplicación
