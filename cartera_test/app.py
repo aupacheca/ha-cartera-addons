@@ -2268,32 +2268,31 @@ def main() -> None:
     mount_src = _get_data_mount_source()
     if mount_src:
         st.sidebar.code(f"Host: {mount_src}\nBD: {DB_PATH}\nCSV: {CSV_PATH}", language=None)
-        st.sidebar.caption("Samba: \\\\homeassistant.local\\\\addon_configs\\\\ (busca la carpeta del add-on)")
+        st.sidebar.caption("Samba: share\\\\cartera_test (o addon_configs si usas /config)")
     else:
         st.sidebar.code(f"Dentro addon: {DB_PATH}", language=None)
 
     # Configurar ruta de datos (plan B si la UI de HA no muestra data_path)
-    CONFIG_PATH_FILE = Path("/config/data_path.txt")
-    if Path("/config").exists():
-        with st.sidebar.expander("⚙️ Ruta de datos (configurar)"):
-            st.caption("Si la configuración de HA no muestra data_path, puedes cambiarla aquí. Reinicia el add-on para aplicar.")
-            current_override = CONFIG_PATH_FILE.read_text().strip() if CONFIG_PATH_FILE.exists() else ""
-            new_path = st.text_input("Ruta (ej. /config, /share/cartera)", value=current_override or str(_DATA_DIR), key="data_path_input")
-            if st.button("Guardar ruta", key="save_data_path"):
-                try:
-                    if new_path and new_path.strip():
-                        p = new_path.strip()
-                        if not p.startswith("/"):
-                            p = "/" + p
-                        CONFIG_PATH_FILE.parent.mkdir(parents=True, exist_ok=True)
-                        CONFIG_PATH_FILE.write_text(p, encoding="utf-8")
-                        st.success(f"Guardado. Reinicia el add-on para usar: {p}")
-                    else:
-                        if CONFIG_PATH_FILE.exists():
-                            CONFIG_PATH_FILE.unlink()
-                        st.info("Eliminado. Se usará la ruta por defecto (/config). Reinicia el add-on.")
-                except Exception as e:
-                    st.error(f"No se pudo guardar: {e}")
+    CONFIG_PATH_FILE = Path("/data/data_path_override.txt")
+    with st.sidebar.expander("⚙️ Ruta de datos (configurar)"):
+        st.caption("Por defecto: /share/cartera_test (Samba: share\\\\cartera_test). Reinicia el add-on para aplicar.")
+        current_override = CONFIG_PATH_FILE.read_text().strip() if CONFIG_PATH_FILE.exists() else ""
+        new_path = st.text_input("Ruta (ej. /share/cartera_test, /config)", value=current_override or str(_DATA_DIR), key="data_path_input")
+        if st.button("Guardar ruta", key="save_data_path"):
+            try:
+                if new_path and new_path.strip():
+                    p = new_path.strip()
+                    if not p.startswith("/"):
+                        p = "/" + p
+                    CONFIG_PATH_FILE.parent.mkdir(parents=True, exist_ok=True)
+                    CONFIG_PATH_FILE.write_text(p, encoding="utf-8")
+                    st.success(f"Guardado. Reinicia el add-on para usar: {p}")
+                else:
+                    if CONFIG_PATH_FILE.exists():
+                        CONFIG_PATH_FILE.unlink()
+                    st.info("Eliminado. Se usará la ruta por defecto (/share/cartera_test). Reinicia el add-on.")
+            except Exception as e:
+                st.error(f"No se pudo guardar: {e}")
 
     with st.sidebar.expander("Mantenimiento"):
         st.caption(
