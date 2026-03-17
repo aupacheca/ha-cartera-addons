@@ -2292,21 +2292,23 @@ def main() -> None:
                             out_exp[col] = out_exp[col].astype(str)
                     csv_str = out_exp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING)
                     csv_bytes = csv_str.encode(CSV_ENCODING)
-                    # Probar /share primero (más accesible por Samba), luego /config
-                    for base in ["/share", "/config"]:
-                        export_dir = Path(base) / "cartera_export"
-                        export_path = export_dir / "acciones.csv"
-                        try:
-                            export_dir.mkdir(parents=True, exist_ok=True)
-                            export_path.write_text(csv_str, encoding=CSV_ENCODING)
-                            ruta_samba = "share" if base == "/share" else "config"
-                            st.success(f"Exportado a **{ruta_samba}/cartera_export/acciones.csv**")
-                            st.caption(f"Samba: `\\\\homeassistant.local\\\\{ruta_samba}\\\\cartera_export\\\\`")
-                            break
-                        except Exception:
-                            continue
-                    else:
-                        st.error("No se pudo guardar en /share ni /config")
+                    # Guardar en /data (escribible; /config y /share pueden ser read-only)
+                    export_dir = Path("/data") / "cartera_export"
+                    export_path = export_dir / "acciones.csv"
+                    try:
+                        export_dir.mkdir(parents=True, exist_ok=True)
+                        export_path.write_text(csv_str, encoding=CSV_ENCODING)
+                        st.success("Exportado a **/data/cartera_export/acciones.csv**")
+                        st.caption("Misma ubicación que la BD. Enlace alternativo si no puedes acceder:")
+                        b64 = base64.b64encode(csv_bytes).decode()
+                        st.markdown(
+                            f'<a href="data:text/csv;base64,{b64}" download="acciones.csv" '
+                            'style="display:inline-block;padding:0.5rem 1rem;background:#ff4b4b;color:white;border-radius:0.5rem;text-decoration:none;">'
+                            '⬇️ Descargar acciones.csv</a>',
+                            unsafe_allow_html=True,
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo guardar: {e}")
                         b64 = base64.b64encode(csv_bytes).decode()
                         st.markdown(
                             f'<a href="data:text/csv;base64,{b64}" download="acciones.csv" '
@@ -2350,21 +2352,15 @@ def main() -> None:
                         if col in out_fexp.columns:
                             out_fexp[col] = out_fexp[col].astype(str)
                     csv_fondos_str = out_fexp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING)
-                    for base in ["/share", "/config"]:
-                        export_dir = Path(base) / "cartera_export"
-                        export_path_f = export_dir / "fondos.csv"
-                        try:
-                            export_dir.mkdir(parents=True, exist_ok=True)
-                            export_path_f.write_text(csv_fondos_str, encoding=CSV_ENCODING)
-                            ruta_samba = "share" if base == "/share" else "config"
-                            st.success(f"Exportado a **{ruta_samba}/cartera_export/fondos.csv**")
-                            st.caption(f"Samba: `\\\\homeassistant.local\\\\{ruta_samba}\\\\cartera_export\\\\`")
-                            break
-                        except Exception:
-                            continue
-                    else:
-                        st.error("No se pudo guardar en /share ni /config")
-        st.caption("_Samba: \\\\homeassistant.local\\\\share\\\\cartera_export\\\\ o \\\\...\\\\config\\\\cartera_export\\\\_")
+                    export_dir = Path("/data") / "cartera_export"
+                    export_path_f = export_dir / "fondos.csv"
+                    try:
+                        export_dir.mkdir(parents=True, exist_ok=True)
+                        export_path_f.write_text(csv_fondos_str, encoding=CSV_ENCODING)
+                        st.success("Exportado a **/data/cartera_export/fondos.csv**")
+                    except Exception as e:
+                        st.error(f"No se pudo guardar: {e}")
+        st.caption("_Export: /data/cartera_export/ (misma ubicación que la BD)_")
         # Restaurar fondos: subir CSV
         uploaded_fondos = st.file_uploader("Restaurar fondos desde CSV", type=["csv"], key="upload_fondos")
         if uploaded_fondos is not None:
