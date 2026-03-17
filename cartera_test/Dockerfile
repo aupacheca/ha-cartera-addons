@@ -14,8 +14,9 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Copiar requirements e instalar dependencias Python
+# --prefer-binary evita compilar desde fuente (importante en Raspberry Pi)
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Copiar aplicación
 COPY app.py .
@@ -27,8 +28,8 @@ WORKDIR /data
 # Exponer puerto Streamlit (versión de prueba: 8502)
 EXPOSE 8502
 
-# Script de inicio
+# Script de inicio (corregir CRLF de Windows si existe)
 COPY run.sh /run.sh
-RUN chmod a+x /run.sh
+RUN sed -i 's/\r$//' /run.sh && chmod a+x /run.sh
 
 CMD ["/run.sh"]
