@@ -15,6 +15,7 @@ arch:
 init: false
 map:
   - config
+  - share
 ports:
   "8502/tcp": 8502
 ports_description:
