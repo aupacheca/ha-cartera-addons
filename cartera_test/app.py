@@ -2279,23 +2279,35 @@ def main() -> None:
             "no abras los CSV con Excel si no quieres corromper el formato."
         )
         st.caption("**Acciones / ETFs:**")
-        # Exportar: genera CSV y ofrece descarga (enlace data URL para que funcione en iframe)
-        df_exp = load_data()
-        if not df_exp.empty:
-            cols_exp = [c for c in MOVIMIENTOS_COLUMNS if c in df_exp.columns]
-            if cols_exp:
-                out_exp = df_exp[cols_exp].copy()
-                for col in ("date", "time"):
-                    if col in out_exp.columns:
-                        out_exp[col] = out_exp[col].astype(str)
-                csv_bytes = out_exp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING).encode(CSV_ENCODING)
-                b64 = base64.b64encode(csv_bytes).decode()
-                st.markdown(
-                    f'<a href="data:text/csv;base64,{b64}" download="acciones.csv" '
-                    'style="display:inline-block;padding:0.5rem 1rem;background:#ff4b4b;color:white;border-radius:0.5rem;text-decoration:none;font-size:0.9rem;">'
-                    '⬇️ Descargar acciones.csv</a>',
-                    unsafe_allow_html=True,
-                )
+        if st.button("Exportar acciones a CSV (respaldo)", key="exp_acc"):
+            df_exp = load_data()
+            if df_exp.empty:
+                st.warning("No hay movimientos de acciones para exportar.")
+            else:
+                cols_exp = [c for c in MOVIMIENTOS_COLUMNS if c in df_exp.columns]
+                if cols_exp:
+                    out_exp = df_exp[cols_exp].copy()
+                    for col in ("date", "time"):
+                        if col in out_exp.columns:
+                            out_exp[col] = out_exp[col].astype(str)
+                    csv_str = out_exp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING)
+                    csv_bytes = csv_str.encode(CSV_ENCODING)
+                    export_dir = Path("/config/cartera_export")
+                    export_path = export_dir / "acciones.csv"
+                    try:
+                        export_dir.mkdir(parents=True, exist_ok=True)
+                        export_path.write_text(csv_str, encoding=CSV_ENCODING)
+                        st.success("Exportado a **config/cartera_export/acciones.csv**")
+                        st.caption("Accede por Samba: `\\\\homeassistant.local\\\\config\\\\cartera_export\\\\`")
+                    except Exception as e:
+                        st.error(f"No se pudo guardar en /config: {e}")
+                        b64 = base64.b64encode(csv_bytes).decode()
+                        st.markdown(
+                            f'<a href="data:text/csv;base64,{b64}" download="acciones.csv" '
+                            'style="display:inline-block;padding:0.5rem 1rem;background:#ff4b4b;color:white;border-radius:0.5rem;text-decoration:none;">'
+                            '⬇️ Descargar (enlace alternativo)</a>',
+                            unsafe_allow_html=True,
+                        )
         # Restaurar: subir CSV desde el PC
         uploaded_acc = st.file_uploader("Restaurar acciones desde CSV", type=["csv"], key="upload_acciones")
         if uploaded_acc is not None:
@@ -2320,24 +2332,28 @@ def main() -> None:
             except Exception as e:
                 st.error(f"No se pudo leer el CSV: {e}")
         st.caption("**Fondos:**")
-        # Exportar fondos: enlace data URL (funciona en iframe)
-        df_fondos_exp = load_data_fondos()
-        if df_fondos_exp is not None and not df_fondos_exp.empty:
-            cols_fexp = [c for c in MOVIMIENTOS_COLUMNS if c in df_fondos_exp.columns]
-            if cols_fexp:
-                out_fexp = df_fondos_exp[cols_fexp].copy()
-                for col in ("date", "time"):
-                    if col in out_fexp.columns:
-                        out_fexp[col] = out_fexp[col].astype(str)
-                csv_fondos = out_fexp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING).encode(CSV_ENCODING)
-                b64_f = base64.b64encode(csv_fondos).decode()
-                st.markdown(
-                    f'<a href="data:text/csv;base64,{b64_f}" download="fondos.csv" '
-                    'style="display:inline-block;padding:0.5rem 1rem;background:#ff4b4b;color:white;border-radius:0.5rem;text-decoration:none;font-size:0.9rem;">'
-                    '⬇️ Descargar fondos.csv</a>',
-                    unsafe_allow_html=True,
-                )
-        st.caption("_Si no descarga: abre la app en nueva pestaña (http://homeassistant.local:8502)_")
+        if st.button("Exportar fondos a CSV (respaldo)", key="exp_fondos"):
+            df_fondos_exp = load_data_fondos()
+            if df_fondos_exp is None or df_fondos_exp.empty:
+                st.warning("No hay movimientos de fondos para exportar.")
+            else:
+                cols_fexp = [c for c in MOVIMIENTOS_COLUMNS if c in df_fondos_exp.columns]
+                if cols_fexp:
+                    out_fexp = df_fondos_exp[cols_fexp].copy()
+                    for col in ("date", "time"):
+                        if col in out_fexp.columns:
+                            out_fexp[col] = out_fexp[col].astype(str)
+                    csv_fondos_str = out_fexp.to_csv(index=False, decimal=CSV_DECIMAL, sep=CSV_SEP, encoding=CSV_ENCODING)
+                    export_dir = Path("/config/cartera_export")
+                    export_path_f = export_dir / "fondos.csv"
+                    try:
+                        export_dir.mkdir(parents=True, exist_ok=True)
+                        export_path_f.write_text(csv_fondos_str, encoding=CSV_ENCODING)
+                        st.success("Exportado a **config/cartera_export/fondos.csv**")
+                        st.caption("Accede por Samba: `\\\\homeassistant.local\\\\config\\\\cartera_export\\\\`")
+                    except Exception as e:
+                        st.error(f"No se pudo guardar en /config: {e}")
+        st.caption("_Ruta Samba: \\\\homeassistant.local\\\\config\\\\cartera_export\\\\_")
         # Restaurar fondos: subir CSV
         uploaded_fondos = st.file_uploader("Restaurar fondos desde CSV", type=["csv"], key="upload_fondos")
         if uploaded_fondos is not None:

@@ -3,7 +3,7 @@
 
 name: Cartera TEST
 description: Aplicacion de cartera de inversiones (acciones, ETFs, fondos, criptos) con Streamlit. Gestiona movimientos, dividendos y fiscalidad. VERSION DE PRUEBA - usa puerto 8502 y base de datos acciones_test.db.
-version: "1.0.0"
+version: "1.0.1"
 slug: cartera_test
 url: "https://github.com/aupacheca/ha-cartera-addons"
 arch:
@@ -13,6 +13,8 @@ arch:
   - amd64
   - i386
 init: false
+map:
+  - config
 ports:
   "8502/tcp": 8502
 ports_description:
