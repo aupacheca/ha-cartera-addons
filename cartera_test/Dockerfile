@@ -1,22 +1,16 @@
 # Cartera Inversiones - Add-on Home Assistant
-# Optimizado para ARM64 (Raspberry Pi 4) y otras arquitecturas
+# Base Debian: wheels precompilados para numpy/pandas en ARM (evita compilación)
 
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
-
-# Instalar dependencias del sistema para pandas/numpy (Alpine)
-RUN apk add --no-cache \
-    build-base \
-    libffi-dev \
-    libstdc++
 
 # Crear directorio de la aplicación
 WORKDIR /app
 
 # Copiar requirements e instalar dependencias Python
-# --prefer-binary evita compilar desde fuente (importante en Raspberry Pi)
+# Debian tiene wheels para todas las arquitecturas - sin compilación
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --prefer-binary -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copiar aplicación
 COPY app.py .
